@@ -16,10 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.ambari.logsearch.model.response;
+package org.apache.ambari.logsearch.doc;
 
-public class ShipperConfigDescriptionData {
-  private final String path;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+public class PropertyDescriptionData {
+  private final String name;
 
   private final String description;
 
@@ -27,15 +29,19 @@ public class ShipperConfigDescriptionData {
 
   private final String defaultValue;
 
-  public ShipperConfigDescriptionData(String path, String description, String[] examples, String defaultValue) {
-    this.path = path;
+  @JsonIgnore
+  private final String source;
+
+  public PropertyDescriptionData(String name, String description, String[] examples, String defaultValue, String source) {
+    this.name = name;
     this.description = description;
     this.examples = examples;
     this.defaultValue = defaultValue;
+    this.source = source;
   }
 
-  public String getPath() {
-    return path;
+  public String getName() {
+    return name;
   }
 
   public String getDescription() {
@@ -48,5 +54,9 @@ public class ShipperConfigDescriptionData {
 
   public String getDefaultValue() {
     return defaultValue;
+  }
+
+  public String getSource() {
+    return source;
   }
 }

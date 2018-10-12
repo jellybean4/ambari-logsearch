@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -16,68 +16,59 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.ambari.logsearch.common;
+package org.apache.ambari.logsearch.doc;
 
 import org.apache.ambari.logsearch.config.api.LogSearchPropertyDescription;
-import org.apache.ambari.logsearch.model.response.PropertyDescriptionData;
+import org.apache.ambari.logsearch.config.api.ShipperConfigElementDescription;
 import org.reflections.Reflections;
 import org.reflections.scanners.FieldAnnotationsScanner;
 import org.reflections.scanners.MethodAnnotationsScanner;
-import org.springframework.beans.factory.annotation.Value;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Named;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static org.apache.ambari.logsearch.common.LogSearchConstants.LOGSEARCH_PROPERTIES_FILE;
+public class LogSearchMarkdownGenerator {
 
-@Named
-public class PropertyDescriptionStorage {
+  public static void main(String[] args) {
+    final Map<String, List<PropertyDescriptionData>> propertyDescriptions = new ConcurrentHashMap<>();
+    final List<String> configPackagesToScan = Arrays.asList("org.apache.ambari.logsearch", "org.apache.ambari.logfeeder");
+    fillPropertyDescriptions(propertyDescriptions, configPackagesToScan);
+    System.out.println(propertyDescriptions);
 
-  private final Map<String, List<PropertyDescriptionData>> propertyDescriptions = new ConcurrentHashMap<>();
-
-  @Value("#{'${logsearch.doc.scan.prop.packages:org.apache.ambari.logsearch,org.apache.ambari.logfeeder}'.split(',')}")
-  @LogSearchPropertyDescription(
-    name = "logsearch.doc.scan.prop.packages",
-    description = "Comma separated list of packages for scanning @LogSearchPropertyDescription annotations.",
-    examples = {"org.apache.ambari.logsearch.mypackage"},
-    defaultValue = "org.apache.ambari.logsearch,org.apache.ambari.logfeeder",
-    sources = {LOGSEARCH_PROPERTIES_FILE}
-  )
-  private List<String> packagesToScan;
-
-  @PostConstruct
-  public void postConstruct() {
-    Thread loadPropertyDescriptionsThread = new Thread("load_property_descriptions") {
-      @Override
-      public void run() {
-        fillPropertyDescriptions();
-      }
-    };
-    loadPropertyDescriptionsThread.setDaemon(true);
-    loadPropertyDescriptionsThread.start();
+    final List<ShipperConfigDescriptionData> shipperConfigDescription = new ArrayList<>();
+    final List<String> shipperConfigPackagesToScan = Arrays.asList("org.apache.ambari.logsearch.config.json.model.inputconfig.impl");
+    fillShipperConfigDescriptions(shipperConfigDescription, shipperConfigPackagesToScan);
+    System.out.println(shipperConfigDescription);
   }
 
-  public Map<String, List<PropertyDescriptionData>> getPropertyDescriptions() {
-    return propertyDescriptions;
-  }
-
-  private void fillPropertyDescriptions() {
+  private static void fillPropertyDescriptions(Map<String, List<PropertyDescriptionData>> propertyDescriptions, List<String> packagesToScan) {
     List<PropertyDescriptionData> propertyDescriptionsList = getPropertyDescriptions(packagesToScan);
     Map<String, List<PropertyDescriptionData>> mapToAdd = propertyDescriptionsList.stream()
-      .sorted((o1, o2) -> o1.getName().compareTo(o2.getName()))
+      .sorted(Comparator.comparing(PropertyDescriptionData::getName))
       .collect(Collectors.groupingBy(PropertyDescriptionData::getSource));
     propertyDescriptions.putAll(mapToAdd);
   }
 
-  private List<PropertyDescriptionData> getPropertyDescriptions(List<String> packagesToScan) {
+  private static void fillShipperConfigDescriptions(List<ShipperConfigDescriptionData> shipperConfigDescription, List<String> shipperConfigPackagesToScan) {
+    Reflections reflections = new Reflections(shipperConfigPackagesToScan, new FieldAnnotationsScanner());
+    Set<Field> fields = reflections.getFieldsAnnotatedWith(ShipperConfigElementDescription.class);
+    for (Field field : fields) {
+      ShipperConfigElementDescription description = field.getAnnotation(ShipperConfigElementDescription.class);
+      shipperConfigDescription.add(new ShipperConfigDescriptionData(description.path(), description.description(),
+        description.examples(), description.defaultValue()));
+    }
+    shipperConfigDescription.sort(Comparator.comparing(ShipperConfigDescriptionData::getPath));
+  }
+
+  private static List<PropertyDescriptionData> getPropertyDescriptions(List<String> packagesToScan) {
     List<PropertyDescriptionData> result = new ArrayList<>();
     for (String packageToScan : packagesToScan) {
       Reflections reflections = new Reflections(packageToScan, new FieldAnnotationsScanner(), new MethodAnnotationsScanner());

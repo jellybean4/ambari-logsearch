@@ -20,16 +20,11 @@
 package org.apache.ambari.logsearch.manager;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.ambari.logsearch.common.LogSearchConstants;
 import org.apache.ambari.logsearch.conf.AuthPropsConfig;
-import org.apache.ambari.logsearch.common.PropertyDescriptionStorage;
-import org.apache.ambari.logsearch.common.ShipperConfigDescriptionStorage;
 import org.apache.ambari.logsearch.conf.LogSearchConfigApiConfig;
-import org.apache.ambari.logsearch.model.response.PropertyDescriptionData;
-import org.apache.ambari.logsearch.model.response.ShipperConfigDescriptionData;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.inject.Inject;
@@ -52,12 +47,6 @@ public class InfoManager extends JsonManagerBase {
 
   @Inject
   private LogSearchConfigApiConfig logSearchConfigApiConfig;
-
-  @Inject
-  private PropertyDescriptionStorage propertyDescriptionStore;
-
-  @Inject
-  private ShipperConfigDescriptionStorage shipperConfigDescriptionStore;
 
   public Map<String, String> getApplicationInfo() {
     Map<String, String> appMap = new HashMap<>();
@@ -82,17 +71,5 @@ public class InfoManager extends JsonManagerBase {
     featuresMap.put(LogSearchConstants.AUTH_FEATURE_KEY, getAuthMap());
     featuresMap.put(LogSearchConstants.SHIPPER_CONFIG_API_KEY, logSearchConfigApiConfig.isConfigApiEnabled());
     return featuresMap;
-  }
-
-  public Map<String, List<PropertyDescriptionData>> getPropertyDescriptions() {
-    return propertyDescriptionStore.getPropertyDescriptions();
-  }
-
-  public List<PropertyDescriptionData> getLogSearchPropertyDescriptions(String propertiesFile) {
-    return getPropertyDescriptions().get(propertiesFile);
-  }
-  
-  public List<ShipperConfigDescriptionData> getLogSearchShipperConfigDescription() {
-    return shipperConfigDescriptionStore.getShipperConfigDescription();
   }
 }
